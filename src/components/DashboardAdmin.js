@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api';
+import { useNavigate } from 'react-router-dom';
 import {
   Container, Typography, TextField, Button, Table, TableBody,
   TableCell, TableHead, TableRow, Paper, Box
@@ -13,6 +14,12 @@ export default function DashboardAdmin() {
     password: ''
   });
   const [message, setMessage] = useState('');
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    navigate('/login');
+  };
 
   const fetchUsers = async () => {
     try {
@@ -50,7 +57,12 @@ export default function DashboardAdmin() {
 
   return (
     <Container sx={{ mt: 5 }}>
-      <Typography variant="h4" gutterBottom>Admin Dashboard</Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h4">Admin Dashboard</Typography>
+        <Button variant="outlined" color="error" onClick={handleLogout}>
+          Logout
+        </Button>
+      </Box>
 
       <Box sx={{ mb: 3 }}>
         <Typography variant="h6">Create Officer Account</Typography>

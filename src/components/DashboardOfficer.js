@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api';
+import { useNavigate } from 'react-router-dom';
 import {
   Container, Typography, Paper, Table, TableBody, TableCell,
-  TableHead, TableRow, TextField, Select, MenuItem, Button, Box
+  TableHead, TableRow, TextField, Select, MenuItem, Button, Box, Alert
 } from '@mui/material';
 
 export default function DashboardOfficer() {
@@ -10,8 +11,14 @@ export default function DashboardOfficer() {
   const [editingId, setEditingId] = useState(null);
   const [status, setStatus] = useState('');
   const [comment, setComment] = useState('');
+  const [message, setMessage] = useState('');
+  const navigate = useNavigate();
 
-  // Fetch all birth info
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    navigate('/login');
+  };
+
   const fetchBirthInfos = async () => {
     try {
       const res = await api.get('/api/birth/all');
@@ -21,24 +28,55 @@ export default function DashboardOfficer() {
     }
   };
 
-  // Start editing a specific row
   const handleEdit = (info) => {
     setEditingId(info.id);
     setStatus(info.status || '');
     setComment(info.comment || '');
   };
 
-  // Save updated status and comment
   const handleUpdate = async (id) => {
     try {
       await api.put(`/api/birth/update-status/${id}`, {
         status,
         comment,
       });
+      setMessage('Request updated successfully.');
       setEditingId(null);
       fetchBirthInfos();
     } catch (err) {
-      console.error('Update failed:', err);
+      const serverMessage = typeof err?.response?.data === 'string'
+        ? err.response.data
+        : 'Update failed';
+      setMessage(serverMessage);
+    }
+  };
+
+  const handleViewUploadedCertificate = async (id, fallbackName) => {
+    try {
+      const res = await api.get(`/api/birth/uploaded-certificate/${id}`, {
+        responseType: 'blob',
+      });
+
+      const contentType = res.headers['content-type'] || 'application/octet-stream';
+      const blob = new Blob([res.data], { type: contentType });
+      const url = window.URL.createObjectURL(blob);
+      const win = window.open(url, '_blank', 'noopener,noreferrer');
+
+      if (!win) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fallbackName || `uploaded_certificate_${id}`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
+
+      setTimeout(() => window.URL.revokeObjectURL(url), 3000);
+    } catch (err) {
+      const serverMessage = typeof err?.response?.data === 'string'
+        ? err.response.data
+        : 'Unable to open uploaded certificate';
+      setMessage(serverMessage);
     }
   };
 
@@ -48,7 +86,13 @@ export default function DashboardOfficer() {
 
   return (
     <Container sx={{ mt: 5 }}>
-      <Typography variant="h4" gutterBottom>Officer Dashboard</Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h4">Officer Dashboard</Typography>
+        <Button variant="outlined" color="error" onClick={handleLogout}>
+          Logout
+        </Button>
+      </Box>
+      {message && <Alert severity="info" sx={{ mb: 2 }}>{message}</Alert>}
 
       <Paper sx={{ mt: 3, overflowX: 'auto' }}>
         <Table>
@@ -57,9 +101,10 @@ export default function DashboardOfficer() {
               <TableCell>Full Name</TableCell>
               <TableCell>DOB</TableCell>
               <TableCell>Place of Birth</TableCell>
-              <TableCell>Father’s Name</TableCell>
-              <TableCell>Mother’s Name</TableCell>
+              <TableCell>Father Name</TableCell>
+              <TableCell>Mother Name</TableCell>
               <TableCell>Address</TableCell>
+              <TableCell>Uploaded</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>Comment</TableCell>
               <TableCell>Action</TableCell>
@@ -74,6 +119,17 @@ export default function DashboardOfficer() {
                 <TableCell>{info.fatherName}</TableCell>
                 <TableCell>{info.motherName}</TableCell>
                 <TableCell>{info.address}</TableCell>
+                <TableCell>
+                  {info.hasUploadedCertificate ? (
+                    <Button
+                      variant="text"
+                      size="small"
+                      onClick={() => handleViewUploadedCertificate(info.id, info.uploadedCertificateName)}
+                    >
+                      View Certificate
+                    </Button>
+                  ) : 'No'}
+                </TableCell>
 
                 <TableCell>
                   {editingId === info.id ? (

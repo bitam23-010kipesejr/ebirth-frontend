@@ -28,6 +28,13 @@ const theme = createTheme({
 });
 
 function App() {
+  const currentUser = localStorage.getItem('user');
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    window.location.href = '/login';
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -51,12 +58,20 @@ function App() {
               </Typography>
 
               <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button color="inherit" component={Link} to="/register">
-                  Register
-                </Button>
-                <Button color="inherit" component={Link} to="/login">
-                  Login
-                </Button>
+                {!currentUser ? (
+                  <>
+                    <Button color="inherit" component={Link} to="/register">
+                      Register
+                    </Button>
+                    <Button color="inherit" component={Link} to="/login">
+                      Login
+                    </Button>
+                  </>
+                ) : (
+                  <Button color="inherit" onClick={handleLogout}>
+                    Logout
+                  </Button>
+                )}
               </Box>
             </Toolbar>
           </Container>
